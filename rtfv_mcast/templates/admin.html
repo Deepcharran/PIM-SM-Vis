@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<style>
+
+/* .links line {
+  stroke: #1f77b4;
+  stroke-opacity: 0.6;
+} */
+
+.nodes circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+text {
+  font-family: sans-serif;
+  font-size: 10px;
+}
+
+h1 {
+    text-align:center;
+}
+
+.sidenavi {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #1f77b4;
+  overflow-x: hidden;
+  transition: 0.1s;
+  padding-top: 60px;
+}
+
+.sidenavi a {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 20px;
+  color: black;
+  display: block;
+  transition: 0.3s;
+}
+
+.sidenavi .closebtn {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+}
+
+@media screen and (max-height: 450px) {
+  .sidenavi {padding-top: 15px;}
+  .sidenavi a {font-size: 18px;}
+}
+
+.wrapper{
+width:200px;
+padding:5px;
+}
+
+.form-control{
+  width: 75%;
+}
+
+#tables {
+    float: right;
+    padding-top: 150px;
+    padding-right: 50px;
+    font-size: medium;
+    
+}
+
+.splitleft {
+  height: 100%;
+  width: 20%;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  overflow-x: hidden;
+}
+
+.splitright {
+  height: 100%;
+  width: 80%;
+  margin-left: 100px;
+  overflow-x: hidden;
+}
+
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeout {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+</style>
+<header>
+<div id="mySidenav" class="sidenavi" style="font-family: 'Times New Roman'">
+  <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+  <h2 style=" text-align: center; color: white; font-family: 'Times New Roman', Times, serif" >
+    RTFV (Multicast)
+  </h2>
+  <hr style="color: white;">
+  <a href="./admin.html" style="color: white; text-decoration: none;">ADMIN</a>
+  <a href="./" style="color: white; text-decoration: none;">HOME</a>
+  <a href="./" style="color: white; text-decoration: none; pointer-events: none;">VISUALIZATIONS</a>
+  <a href="./topology.html" style="font-size: 18px; color: white; text-decoration: none;">- TOPOLOGY</a>
+  <a href="./pimssm.html" style="font-size: 18px; color: white; text-decoration: none;">- PIM SSM</a>
+  <a href="./pimsm.html" style="font-size: 18px; color: white; text-decoration: none;">- PIM SM</a>
+  <a href="./about.html" style="color: white; text-decoration: none;">ABOUT US</a>
+</div>
+<span style="font-size:30px;cursor:pointer; position:absolute; margin:20px; " onclick="openNav()">&#9776; </span>
+<div id="logo_id" class="logo" style="padding-left: 75px;padding-top: 20px;">
+  <a href="https://www.cisco.com/c/en_in/index.html">
+  <img src="/static/img/cisco_logo.png" style="height: 50px;">
+  </a>
+</div>
+<h2 id="header_1_id" style="font-family: 'Times New Roman'; color: black; text-align: center; margin-top: -50px;">
+Realtime Multicast Flow Visualization</h2>
+<h3 id="header_2_id" style="text-align: center; background-color: white;">Admin Page Under Construction</h3>
+</header>
+<div id="topologybg" class="splitright">
+<svg width="600" height="600" style="float: inherit;margin-top: -100px;"></svg>
+<div id="tables"></div>
+</div>
+
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+
+<script>
+
+function openNav() {
+  document.getElementById("mySidenav").style.width = "250px";
+  document.getElementById("logo_id").style.marginLeft = "250px";
+  document.getElementById("header_1_id").style.marginLeft = "250px";
+  document.getElementById("header_2_id").style.marginLeft = "250px";
+  document.getElementById("topologybg").style.marginLeft = "250px";
+}
+
+function closeNav() {
+  document.getElementById("mySidenav").style.width = "0";
+  document.getElementById("logo_id").style.marginLeft = "0";
+  document.getElementById("header_1_id").style.marginLeft = "0";
+  document.getElementById("header_2_id").style.marginLeft = "0";
+  document.getElementById("topologybg").style.marginLeft= "100px";
+}
+
+</script>

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<style>
+
+/* .links line {
+  stroke: #1f77b4;
+  stroke-opacity: 0.6;
+} */
+
+.nodes circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+text {
+  font-family: sans-serif;
+  font-size: 10px;
+}
+
+h1 {
+    text-align:center;
+}
+
+.sidenavi {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #1f77b4;
+  overflow-x: hidden;
+  transition: 0.1s;
+  padding-top: 60px;
+}
+
+.sidenavi a {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 20px;
+  color: black;
+  display: block;
+  transition: 0.3s;
+}
+
+.sidenavi .closebtn {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+}
+
+@media screen and (max-height: 450px) {
+  .sidenavi {padding-top: 15px;}
+  .sidenavi a {font-size: 18px;}
+}
+
+.wrapper{
+width:200px;
+padding:5px;
+}
+
+.form-control{
+  width: 75%;
+}
+
+#tables {
+    float: right;
+    padding-top: 75px;
+    margin-right: 65px;
+    font-size: medium;
+    
+}
+
+.splitleft {
+  height: 100%;
+  width: 20%;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  overflow-x: hidden;
+}
+
+.splitright {
+  height: 100%;
+  width: 92%;
+  margin-left: 100px;
+  overflow-x: hidden;
+}
+
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeout {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+</style>
+<header>
+<div id="mySidenav" class="sidenavi" style="font-family: 'Times New Roman'">
+  <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+  <h2 style=" text-align: center; color: white; font-family: 'Times New Roman', Times, serif" >
+    RTFV (Multicast)
+  </h2>
+  <hr style="color: white;">
+  <a href="./admin.html" style="color: white; text-decoration: none;">ADMIN</a>
+  <a href="./" style="color: white; text-decoration: none;">HOME</a>
+  <a href="./" style="color: white; text-decoration: none; pointer-events: none;">VISUALIZATIONS</a>
+  <a href="./topology.html" style="font-size: 18px; color: white; text-decoration: none;">- TOPOLOGY</a>
+  <a href="./pimssm.html" style="font-size: 18px; color: white; text-decoration: none;">- PIM SSM</a>
+  <a href="./pimsm.html" style="font-size: 18px; color: white; text-decoration: none;">- PIM SM</a>
+  <div class="wrapper">
+    <select name="sm_group_list_box" id="sm_group_list_box" disabled class="form-control" onfocus='this.size=2;' onblur='this.size=1;' onchange='this.size=1; this.blur();' style="margin-left: 30px; position: relative;">
+    </select>
+  </div>
+  <a href="./about.html" style="color: white; text-decoration: none;">ABOUT US</a>
+</div>
+<span style="font-size:30px;cursor:pointer; position:absolute; margin:20px; " onclick="openNav()">&#9776; </span>
+<div id="logo_id" class="logo" style="padding-left: 75px;padding-top: 20px;">
+  <a href="https://www.cisco.com/c/en_in/index.html">
+  <img src="/static/img/cisco_logo.png" style="height: 50px;">
+  </a>
+</div>
+<h2 id="header_1_id" style="font-family: 'Times New Roman', Times, serif; color: black; text-align: center; margin-top: -50px;">Realtime Multicast Flow Visualization</h2>
+<h3 id="header_2_id" style="text-align: center; background-color: white;">PIM SM</h3>
+<form style="margin-left: 250px; margin-left: 500px; margin-top: 50px;">
+  <input type="checkbox" id="myCheck" name="myCheck">Show Labels
+</form>
+</header>
+<div id="topologybg" class="splitright">
+<svg id="chart_id" width="600" height="600" style="float: inherit; margin-top: -150px; margin-left: 200px;"></svg>
+<div id="tables"></div>
+</div>
+  
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+
+<script>
+
+function openNav() {
+  document.getElementById("mySidenav").style.width = "250px";
+  document.getElementById("logo_id").style.marginLeft = "250px";
+  document.getElementById("header_1_id").style.marginLeft = "250px";
+  document.getElementById("header_2_id").style.marginLeft = "250px";
+  document.getElementById("chart_id").style.marginLeft = "200px";
+}
+
+function closeNav() {
+  document.getElementById("mySidenav").style.width = "0";
+  document.getElementById("logo_id").style.marginLeft = "0";
+  document.getElementById("header_1_id").style.marginLeft = "0";
+  document.getElementById("header_2_id").style.marginLeft = "0";
+  document.getElementById("chart_id").style.marginLeft= "200px";
+}
+var routerlists, neighrouter, graph, flag=0, default_selected_group=null;
+
+$(function(){
+	loadNewDecimal()
+	window.setInterval(function(){
+	loadNewDecimal()
+  // console.log(this.routerlists, this.neighrouter, this.graph);
+	}, 30000)
+
+  function loadNewDecimal(){
+  var scope=this;
+  $.ajax({ 
+	url:"/update_decimal",
+	type: "POST",
+	dataType: "json",
+	success: function(data){
+	// $(random_decimal).html(data)
+  // console.log(data);
+  // console.log("1");
+  scope.routerlists=data.w;
+  scope.sparse_no_traffic_result=data.u1;
+  scope.sparse_traffic_result=data.v1;
+  scope.sm_groups_no_traffic=data.w1;
+  scope.tableres=data.y;
+  scope.rp_router=data.x1;
+
+  scope.graph={
+  "nodes": scope.routerlists,
+  "tableresults": scope.tableres,
+  "sm_groups_no_traffic": scope.sm_groups_no_traffic,
+  "sm_flow_details_without_traffic": scope.sparse_no_traffic_result,
+  "sm_flow_details_with_traffic": scope.sparse_traffic_result,
+  "rp_router_name": scope.rp_router
+}
+// $("svg")?.remove();
+flag=1;
+// console.log("2")
+
+// console.log(graph.sm_groups_no_traffic);
+
+
+  var allGroup = (graph.sm_groups_no_traffic).slice();
+  allGroup.pop();
+  allGroup.sort();
+  allGroup.unshift("None");
+    // add the options to the button
+    $('#sm_group_list_box').attr('disabled', false); 
+    d3.select("#sm_group_list_box").selectAll("option").remove();
+    var groupbutton = d3.select("#sm_group_list_box")
+      .selectAll('myOptions')
+     	.data(allGroup)
+      .enter()
+    	.append('option')
+      .text(function (d) { return d; }) // text showed in the menu
+      .attr("value", function (d) { var grp_value=d; return d; })
+      .property("selected", function(d){ 
+        if(default_selected_group==null) 
+        {
+          return d==='None'; 
+        }
+        else 
+        {
+          // console.log(default_selected_group)
+          return d===default_selected_group
+        }
+        })    
+
+  sm_flow_details=[]
+  if(graph.sm_flow_details_with_traffic.length==0)
+  {
+    sm_flow_details=(graph.sm_flow_details_without_traffic).slice();
+    console.log("Without Traffic");
+  }
+  else
+  {
+    sm_flow_details=(graph.sm_flow_details_with_traffic).slice();
+    console.log(sm_flow_details)
+    console.log("With Traffic");
+  }
+
+
+  if(default_selected_group==null)
+  {
+    update('None');
+  }
+  else
+  {
+    update(default_selected_group);
+  }
+
+// update('None');
+// console.log("hi")
+	}
+
+	});
+}
+});
+// console.log("hello")
+// update('None');
+
+
+    // A function that update the chart
+    function update(selectedGroup) {
+      // links.exit().remove();
+      // nodes.exit().remove();
+    d3.selectAll("svg > *").remove();
+    // d3.selectAll('myCheck').property('checked', false);
+    document.getElementById("myCheck").checked = true;
+
+    
+    // dataFilter=[{'source': 'Receiver 2', 'target': 'ASR-9906-B', 'group': '232.1.1.1'}, {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': '232.1.1.2'}, {'source': 'ASR-9906-B', 'target': 'ASR-9904-G-LS', 'group': '232.1.1.1'}, {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'group': '232.1.1.1'}, {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'group': '232.1.1.2'}, {'source': 'NCS-5508-A', 'target': 'Multicast Source', 'group': '232.1.1.1'}, {'source': 'NCS-5508-A', 'target': 'Multicast Source', 'group': '232.1.1.2'}, {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'group': 'None'}, {'source': 'ASR-9904-G-LS', 'target': 'ASR-9906-B', 'group': 'None'}, {'source': 'ASR-9906-B', 'target': 'ASR9906-A', 'group': 'None'}, {'source': 'ASR-9906-B', 'target': 'ASR-9904-G-LS', 'group': 'None'}, {'source': 'ASR9906-A', 'target': 'NCS-5508-A', 'group': 'None'}, {'source': 'ASR9906-A', 'target': 'ASR-9906-B', 'group': 'None'}, {'source': 'NCS-5508-A', 'target': 'ASR9906-A', 'group': 'None'}, {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None'}, {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': 'None'}, {'source': 'Receiver 2', 'target': 'ASR-9906-B', 'group': 'None'}]
+    // graph.ssmflow_details=[{'source': 'Receiver 2', 'target': 'ASR-9906-B', 'color':'blue'}, {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'color':'green'}, {'source': 'ASR-9906-B', 'target': 'ASR-9904-G-LS', 'color':'green'}, {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'color':'green'}, {'source': 'NCS-5508-A', 'target': 'Multicast Source', 'color':'green'}, {'source': 'NCS-5508-A', 'target': 'ASR9906-A', 'color':'blue'}, {'source': 'ASR9906-A', 'target': 'ASR-9906-B', 'color':'blue'}]
+    // var dataFilter = data.map(function(d){return {time: d.time, value:d[selectedGroup]} })
+    // Give these new data to update line
+
+  console.log(graph);
+  // console.log("-2");
+  if(flag==1){
+  d3.selectAll("svg > *").remove();}
+  // console.log("-1");
+
+  imageByType = {
+  "router_online" : "/static/img/router.png",
+  "laptop_online" : "/static/img/laptop.png",
+  "multicast_source_pic" : "/static/img/multicast_source.png",
+  "rp_pic" : "/static/img/rp.png"
+  };
+
+    var svg=  d3.select("svg")
+            width = +svg.attr("width"),
+            height = +svg.attr("height");
+
+  
+  var color = d3.scaleOrdinal(d3.schemeCategory10);
+  var simulation = d3.forceSimulation()
+      .force("link", d3.forceLink().id(function(d) { return d.id; }))
+      .force("charge", d3.forceManyBody().strength(-1000))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(35));  
+  // console.log(graph.ssmflow_details)
+
+  // graph.nodes.push({id:"RP"})
+  console.log(graph.nodes)
+  var links_data=[]
+  var nodes_data=[]
+  var hover_tableresults=[]
+  if(selectedGroup=='None')
+  {
+      hover_tableresults=(graph.tableresults).slice();
+      nodes_data=(graph.nodes).slice();
+      for(i=0;i<(sm_flow_details).length;i++)
+      {
+        // console.log("hii");
+        // console.log(graph.ssmflow_details[i].group);
+        if(sm_flow_details[i].group=='None')
+        {
+          // console.log("this is none group");
+          links_data.push({'source':sm_flow_details[i].source,'target':sm_flow_details[i].target,'group':sm_flow_details[i].group})
+        }
+      }
+      for(i=0;i<(nodes_data).length;i++)
+    {
+      if(nodes_data[i].id=='Multicast Source')
+      {
+        (nodes_data).splice(i,1);
+      }
+    }
+    for(i=0;i<(links_data).length;i++)
+    {
+      if(links_data[i].target=='Multicast Source')
+      {
+        (links_data).splice(i,1);
+      }
+    }
+  }
+  else
+  {
+  // console.log("0");
+  // console.log(dummy_data);
+  // console.log(graph.ssmflow_details);
+  links_data=(sm_flow_details).slice();
+  nodes_data=(graph.nodes).slice();
+  hover_tableresults=(graph.tableresults).slice();
+  visual_array=[]
+  // console.log("1");
+  // console.log(dummy_data);
+  // FILTERING THE GROUP SELECTED BY USER
+  // console.log(dummy_data);
+  for(i=0;i<(links_data).length;i++)
+  {
+    // console.log(dummy_data[i].source, dummy_data[i].target, dummy_data[i].group);
+    if((links_data[i].group.includes(selectedGroup)==1))
+    {
+        visual_array.push({'source':links_data[i].source,'target':links_data[i].target,'group':links_data[i].group,'traffic':links_data[i].traffic});
+    }
+  }
+  console.log(visual_array)
+  links_data_2=visual_array.slice();
+  for(i=0;i<(links_data).length;i++)
+  {
+    flag_visual=0;
+    for(j=0;j<visual_array.length;j++)
+    {
+      if((links_data[i].source==visual_array[j].source && 
+      links_data[i].target==visual_array[j].target)||
+        (links_data[i].source==visual_array[j].target &&
+        links_data[i].target==visual_array[j].source))
+      {
+        flag_visual=1;
+      }
+      
+    }
+    if(links_data[i].group=='None' && flag_visual==0)
+    {
+      links_data_2.push({'source':links_data[i].source,'target':links_data[i].target,'group':links_data[i].group,'traffic':links_data[i].traffic})
+    }
+  }
+  links_data=links_data_2.slice();
+  for(i=0;i<(nodes_data).length;i++)
+  {
+    if(nodes_data[i].id==graph.rp_router_name)
+    {
+      var temp_for_rp=nodes_data[i].id;
+      var temp2_for_rp="(RP)";
+      nodes_data[i].id=temp_for_rp.concat(temp2_for_rp)
+      // console.log(nodes_data[i].id)
+    }
+  }
+  for(i=0;i<(links_data).length;i++)
+  {
+    // console.log(links_data[i])
+    if(links_data[i].source==graph.rp_router_name)
+    {
+      var temp_for_rp=links_data[i].source;
+      var temp2_for_rp="(RP)";
+      links_data[i].source=temp_for_rp.concat(temp2_for_rp)
+      // console.log(links_data[i].source)
+    }
+    if(links_data[i].target==graph.rp_router_name)
+    {
+      var temp_for_rp=links_data[i].target;
+      var temp2_for_rp="(RP)";
+      links_data[i].target=temp_for_rp.concat(temp2_for_rp)
+      // console.log(links_data[i].target)
+    }
+  }
+  for(i=0;i<(hover_tableresults).length;i++)
+  {
+    // console.log(links_data[i])
+    if(hover_tableresults[i]["Source Name"]==graph.rp_router_name)
+    {
+      var temp_for_rp=hover_tableresults[i]["Source Name"];
+      var temp2_for_rp="(RP)";
+      hover_tableresults[i]["Source Name"]=temp_for_rp.concat(temp2_for_rp)
+      // console.log(links_data[i].source)
+    }
+    if(hover_tableresults[i]["Neighbor Name"]==graph.rp_router_name)
+    {
+      var temp_for_rp=hover_tableresults[i]["Neighbor Name"]
+      var temp2_for_rp="(RP)";
+      hover_tableresults[i]["Neighbor Name"]=temp_for_rp.concat(temp2_for_rp)
+      // console.log(links_data[i].target)
+    }
+    if(hover_tableresults[i]["IGMP Source"]==graph.rp_router_name)
+    {
+      var temp_for_rp=hover_tableresults[i]["IGMP Source"];
+      var temp2_for_rp="(RP)";
+      hover_tableresults[i]["IGMP Source"]=temp_for_rp.concat(temp2_for_rp)
+      // console.log(links_data[i].target)
+    }
+    if(hover_tableresults[i]["IGMP Neighbor"]==graph.rp_router_name)
+    {
+      var temp_for_rp=hover_tableresults[i]["IGMP Neighbor"];
+      var temp2_for_rp="(RP)";
+      hover_tableresults[i]["IGMP Neighbor"]=temp_for_rp.concat(temp2_for_rp)
+      // console.log(links_data[i].target)
+    }
+  }
+  // nodes_data.push({id:"RP"})
+  // nodes_data=[]
+  // for(i=0;i<(links_data_2).length;i++)
+  // {
+  //   if(nodes_data.includes(links_data[i].source)==false)
+  //   {
+  //     nodes_data.push(links_data[i].source)
+  //     // console.log(links_data[i].source)
+  //   }
+  //   if(nodes_data.includes(links_data[i].target)==false)
+  //   {
+  //     nodes_data.push(links_data[i].target)
+  //     // console.log(links_data[i].target)
+  //   }
+  // }
+  // for(i=0;i<(nodes_data).length;i++)
+  // {
+  //   nodes_data[i]={'id':nodes_data[i]}
+  // }
+  console.log(links_data, nodes_data);
+}
+    // if(selectedGroup!='None')
+    // links_data_with_traffic=[
+    // {'source': 'Receiver 2', 'target': 'ASR9906-B', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5504-A(RP)', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.1','traffic':'0'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': '225.1.1.2','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.2','traffic':'0'}, 
+    // // {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.2','traffic':'0'},
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5504-A(RP)', 'group': '225.1.1.2','traffic':'0'}, 
+
+
+    // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': '225.1.1.1','traffic':'1'}, 
+    // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.1','traffic':'1'}, 
+    // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': '225.1.1.1','traffic':'1'},
+    // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5504-A(RP)', 'group': '225.1.1.1','traffic':'1'},
+    // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A', 'group': '225.1.1.2','traffic':'1'}, 
+    // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.2','traffic':'1'},
+    // {'source': 'NCS-5504-A', 'target': 'NCS-5504-A', 'group': '225.1.1.2','traffic':'1'}, 
+
+    // // {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'ASR9906-B', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'1'}, 
+    // {'source': 'ASR9906-B', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'ASR9906-B', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'1'}, 
+    // {'source': 'ASR9906-B', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'1'}, 
+    // // {'source': 'Receiver 2', 'target': 'ASR9906-B', 'group': 'None','traffic':'1'}, 
+    // {'source': 'Receiver 3', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'1'}, 
+    // {'source': 'NCS-5508-A', 'target': 'Multicast Source', 'group': 'None','traffic':'1'}
+    // ]
+    // links_data_without_traffic=[
+    // {'source': 'Receiver 2', 'target': 'ASR9906-B', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5504-A(RP)', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': '225.1.1.1','traffic':'0'}, 
+    // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.1','traffic':'0'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': '225.1.1.2','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.2','traffic':'0'}, 
+    // // {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': '225.1.1.2','traffic':'0'},
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5504-A(RP)', 'group': '225.1.1.2','traffic':'0'}, 
+    // // {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'ASR-9904-G-LS', 'target': 'NCS-5508-A', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'ASR9906-B', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // {'source': 'ASR9906-B', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'ASR9906-B', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'ASR9906-B', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'ASR9906-B', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'ASR9906-B', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': 'None','traffic':'0'},
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'ASR9906-B', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5504-A(RP)', 'target': 'NCS-5508-A', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'NCS-5508-A', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'Receiver 1', 'target': 'ASR-9904-G-LS', 'group': 'None','traffic':'0'}, 
+    // // {'source': 'Receiver 2', 'target': 'ASR9906-B', 'group': 'None','traffic':'0'}, 
+    // {'source': 'Receiver 3', 'target': 'NCS-5504-A(RP)', 'group': 'None','traffic':'0'}, 
+    // {'source': 'NCS-5508-A', 'target': 'Multicast Source', 'group': 'None','traffic':'0'}
+    // ]
+
+    // nodes_data=[
+    //   // {'id':'Receiver 2'},
+    //   {'id':'NCS-5508-A'},
+    //   {'id':'ASR-9906-B'},
+    //   {'id':'ASR9906-A'},
+    //   {'id':'ASR-9904-G-LS'},
+    //   {'id':'Receiver 1'}
+    // ]
+  // console.log("1");
+    // console.log("4");
+    // console.log(dummy_data);
+    var link = svg.append("g")
+    .attr("class", "links")
+    .selectAll("line")
+    .data(links_data)
+    .enter().append("line")
+    .attr("stroke-width",3)
+    // .style('stroke-width', function(d) { return 3; })
+    .style("stroke", function(d) {
+      if(d.group=='None'){
+        return '#489ded'
+      }
+      else{
+        if(d.traffic==="0")
+        {
+          // console.log("Heloooo")
+          return (d.group === selectedGroup) ? '#FFD700' : '#489ded'
+          //#FFD700 is golden colour
+        }
+        else if(d.traffic==="1")
+        {
+          // console.log("Heloooo  part2")
+          return (d.group === selectedGroup) ? '#55e081' : '#489ded'
+          //#55e081 is green colour
+        }
+      }
+    })
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout);
+
+    var node = svg.append("g")
+        .attr("class", "nodes")
+      .selectAll("g")
+      .data(nodes_data)
+      .enter().append("g")
+      .attr("target", '_blank');
+    node.call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));  
+
+    node.append("image")
+      .attr("xlink:href" , function (d) {      
+      if((d.id).includes("Receiver"))
+      return imageByType["laptop_online"];
+      else if(d.id=="Multicast Source")
+      return imageByType["multicast_source_pic"];
+      else
+      return imageByType["router_online"];
+      })
+      .attr("x", function(d) { return -25;})
+        .attr("y", function(d) { return -25;})
+        .attr("height", 30)
+        .attr("width", 50)
+        .attr("fill", function(d) { return color(d.group); }); 
+      
+    if (myCheck.checked == true)
+      {
+        show_labels();
+      }
+      
+        myCheck.onclick=()=>{
+      if (myCheck.checked == true)
+      {
+        console.log("Checked");
+        show_labels();
+      }
+      else
+      {
+        console.log("Unchecked");
+        svg.selectAll("text").remove();
+      }
+    }
+     
+    function show_labels(){
+      var lables = node.append("text")
+        .text(function(d) {
+          return d.id;
+        })
+        .attr('x', 20)
+        .attr('y', 7)
+        .style("font-size", "15px");
+    }
+
+    simulation
+        .nodes(nodes_data)
+        .on("tick", ticked);
+
+    simulation.force("link")
+        .links(links_data);    
+
+    function ticked() {
+      link
+          .attr("x1", function(d) { return d.source.x; })
+          .attr("y1", function(d) { return d.source.y; })
+          .attr("x2", function(d) { return d.target.x; })
+          .attr("y2", function(d) { return d.target.y; });
+
+      node
+          .attr("transform", function(d) {
+            return "translate(" + d.x + "," + d.y + ")";
+          })
+    }
+
+  function dragstarted(d) {
+    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+
+  function dragged(d) {
+    d.fx = d3.event.x;
+    d.fy = d3.event.y;
+  }
+
+  function dragended(d) {
+    if (!d3.event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
+
+  var div=d3.select("#tables");	
+ function mouseover(d){ 
+  d3.select(this).select("link").transition()
+      .duration(750)
+      .attr("r", 8);
+      var i,tr,sourceip,sourceint,neighip,neighint;
+for (i = 0; i < hover_tableresults.length; i++) {
+  // console.log(hover_tableresults[0]["Neighbor IP"]);
+  if((d.source.id).includes("Receiver"))
+  {
+  // console.log(d.source.id, d.target.id);
+    if(d.source.id==hover_tableresults[i]["IGMP Source"] && d.target.id==hover_tableresults[i]["IGMP Neighbor"]){
+  tr=hover_tableresults[i]["IGMP Neighbor"];
+  sourceip=hover_tableresults[i]["IGMP Source IP"];
+  // sourceint=hover_tableresults[i]["Source Interface"];
+  neighip=hover_tableresults[i]["Group Address"];
+  neighint=hover_tableresults[i]["IGMP Neighbor Interface"];
+  }
+  }
+  else
+  {
+  if(d.source.id==hover_tableresults[i]["Source Name"] && d.target.id==hover_tableresults[i]["Neighbor Name"]){
+  // console.log(d.source.id, d.target.id);
+  tr=hover_tableresults[i]["Neighbor Name"];
+  sourceip=hover_tableresults[i]["Source IP"];
+  sourceint=hover_tableresults[i]["Source Interface"];
+  neighip=hover_tableresults[i]["Neighbor IP"];
+  neighint=hover_tableresults[i]["Neighbor Interface"];
+  }
+}
+}
+if((d.source.id).includes("Receiver"))
+  {
+    div.html("IGMP Source:" + d.source.id + "<br/>" 
+      + "IGMP Source IP:" + sourceip + "<br/>" 
+      + "IGMP Neighbor:" + tr + "<br/>" 
+      + "Group Address:" + neighip + "<br/>" 
+      + "IGMP Neigh Inter:" + neighint)
+      // div.html("Source Router:" + graph.links[0].source.id.toString() + "<br/>" + "Site:" + graph.nodes[0].id.toString())
+      .style("transition-duration","7s")
+      .style("animation","fadein 7s ease-in");
+    // console.log(neighip);
+
+  }
+  else if((d.target.id).includes("Multicast Source")==0)
+  {
+      div.html("Router 1:" + d.source.id + "<br/>" 
+      + "Router 1 IP:" + sourceip + "<br/>" 
+      + "Router 1 Interface:" + sourceint + "<br/>" 
+      + "Router 2:" + tr + "<br/>" 
+      + "Router 2 IP:" + neighip + "<br/>" 
+      + "Router 2 Interface:" + neighint)
+      // div.html("Source Router:" + graph.links[0].source.id.toString() + "<br/>" + "Site:" + graph.nodes[0].id.toString())
+      .style("transition-duration","7s")
+      .style("animation","fadein 7s ease-in");
+ }
+}
+ function mouseout(){
+    // d3.selectAll("node")
+        d3.select(this).select("link").transition()
+      .duration(750)
+      .attr("r", 5);
+      div
+      .style("transition-duration","7s")
+      .style("animation","fadeout 7s ease-in forwards");
+      
+    }
+    // console.log("5");
+    // console.log(links_data);
+
+
+    // When the button is changed, run the updateChart function
+    d3.select("#sm_group_list_box").on("change", function(d) {
+      // recover the option that has been chosen
+      var selectedOption = d3.select(this).property("value")
+      // run the updateChart function with this selected option
+      default_selected_group=selectedOption
+      update(selectedOption)
+    })
+  
+  // console.log(flag);
+  
+}
+
+</script>

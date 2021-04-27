@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<style>
+
+/* .links line {
+  stroke: #1f77b4;
+  stroke-opacity: 0.6;
+} */
+
+.nodes circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+text {
+  font-family: sans-serif;
+  font-size: 10px;
+}
+
+h1 {
+    text-align:center;
+}
+
+.sidenavi {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #1f77b4;
+  overflow-x: hidden;
+  transition: 0.1s;
+  padding-top: 60px;
+}
+
+.sidenavi a {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 20px;
+  color: black;
+  display: block;
+  transition: 0.3s;
+}
+
+.sidenavi .closebtn {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+}
+
+@media screen and (max-height: 450px) {
+  .sidenavi {padding-top: 15px;}
+  .sidenavi a {font-size: 18px;}
+}
+
+.wrapper{
+width:200px;
+padding:5px;
+}
+
+.form-control{
+  width: 75%;
+}
+
+#tables {
+    float: right;
+    padding-top: 75px;
+    margin-right: 65px;
+    font-size: medium;
+    
+}
+
+.splitleft {
+  height: 100%;
+  width: 20%;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  overflow-x: hidden;
+}
+
+.splitright {
+  height: 100%;
+  width: 92%;
+  margin-left: 100px;
+  overflow-x: hidden;
+}
+
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeout {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+</style>
+<header>
+<div id="mySidenav" class="sidenavi" style="font-family: 'Times New Roman'">
+  <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+  <h2 style=" text-align: center; color: white; font-family: 'Times New Roman', Times, serif" >
+    RTVF (Multicast)
+  </h2>
+  <hr style="color: white;">
+  <a href="./admin.html" style="color: white; text-decoration: none;">ADMIN</a>
+  <a href="./" style="color: white; text-decoration: none;">HOME</a>
+  <a href="./" style="color: white; text-decoration: none; pointer-events: none;">VISUALIZATIONS</a>
+  <a href="./topology.html" style="font-size: 18px; color: white; text-decoration: none;">- TOPOLOGY</a>
+  <a href="./pimssm.html" style="font-size: 18px; color: white; text-decoration: none;">- PIM SSM</a>
+  <a href="./pimsm.html" style="font-size: 18px; color: white; text-decoration: none;">- PIM SM</a>
+  <a href="./about.html" style="color: white; text-decoration: none;">ABOUT US</a>
+</div>
+<span style="font-size:30px;cursor:pointer; position:absolute; margin:20px; " onclick="openNav()">&#9776; </span>
+<div id="logo_id" class="logo" style="padding-left: 75px;padding-top: 20px;">
+  <a href="https://www.cisco.com/c/en_in/index.html">
+  <img src="/static/img/cisco_logo.png" style="height: 50px;">
+  </a>
+</div>
+<h2 id="header_1_id" style="font-family: 'Times New Roman', Times, serif; color: black; text-align: center; margin-top: -50px;">Realtime Multicast Flow Visualization</h2>
+<h3 id="header_2_id" style="text-align: center; background-color: white;">Topology</h3>
+<form style="margin-left: 250px; margin-left: 500px; margin-top: 50px;">
+  <input type="checkbox" id="myCheck" name="myCheck">Show Labels
+</form>
+</header>
+<div id="topologybg" class="splitright">
+<svg id="chart_id" width="600" height="600" style="float: inherit; margin-top: -150px; margin-left: 200px;"></svg>
+<div id="tables"></div>
+</div>
+  
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+
+<script>
+
+function openNav() {
+  document.getElementById("mySidenav").style.width = "250px";
+  document.getElementById("logo_id").style.marginLeft = "250px";
+  document.getElementById("header_1_id").style.marginLeft = "250px";
+  document.getElementById("header_2_id").style.marginLeft = "250px";
+  document.getElementById("chart_id").style.marginLeft = "200px";
+}
+
+function closeNav() {
+  document.getElementById("mySidenav").style.width = "0";
+  document.getElementById("logo_id").style.marginLeft = "0";
+  document.getElementById("header_1_id").style.marginLeft = "0";
+  document.getElementById("header_2_id").style.marginLeft = "0";
+  document.getElementById("chart_id").style.marginLeft= "200px";
+}
+
+var routerlists, neighrouter, graph, flag=0,tablesourcerouter="he", tabletargetrouter="she";
+
+$(function(){
+	loadNewDecimal()
+	window.setInterval(function(){
+	loadNewDecimal()
+  // console.log(this.routerlists, this.neighrouter, this.graph);
+	}, 30000)
+
+  function loadNewDecimal(){
+  var scope=this;
+  $.ajax({ 
+	url:"/update_decimal",
+	type: "POST",
+	dataType: "json",
+	success: function(data){
+	// $(random_decimal).html(data)
+  // console.log(data);
+  console.log("1");
+  scope.routerlists=data.w;
+  scope.neighrouter=data.x;
+  scope.tableres=data.y;
+  scope.ssmflowdetails=data.z;
+  scope.ssm_group_details=data.v;
+
+  scope.graph={
+  "nodes": scope.routerlists,
+  "links": scope.neighrouter,
+  "tableresults": scope.tableres,
+  "ssmflow_details": scope.ssmflowdetails,
+  "ssm_group": scope.ssm_group_details
+}
+for(i=0;i<(graph.nodes).length;i++)
+{
+  if(graph.nodes[i].id=="Multicast Source")
+  graph.nodes.splice(i,1);
+}
+for(i=0;i<(graph.links).length;i++)
+{
+  if(graph.links[i].target.id=="Multicast Source" || graph.links[i].target=="Multicast Source" ||
+  graph.links[i].source=="Multicast Source" || graph.links[i].source.id=="Multicast Source" )
+  graph.links.splice(i,1);
+}
+
+flag=1;
+console.log("2")
+
+
+d3function();
+	}
+
+	});
+}
+});
+d3function();
+
+function d3function(){
+
+  console.log(graph);
+  console.log("-2");
+  if(flag==1){
+  d3.selectAll("svg > *").remove();}
+  // $('#myCheck').attr('checked', false); 
+  document.getElementById("myCheck").checked = true;
+  console.log("-1");
+
+  imageByType = {
+  "router_online" : "/static/img/router.png",
+  "laptop_online" : "/static/img/laptop.png",
+  "multicast_source_pic" : "/static/img/multicast_source.png"
+  };
+  
+  var svg=  d3.select("svg")
+            width = +svg.attr("width"),
+            height = +svg.attr("height");
+
+  
+  var color = d3.scaleOrdinal(d3.schemeCategory20);
+  var simulation = d3.forceSimulation()
+      .force("link", d3.forceLink().id(function(d) { return d.id; }))
+      .force("charge", d3.forceManyBody().strength(-1000))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(35));      ;
+
+
+      var link = svg.append("g")
+    .attr("class", "links")
+    .selectAll("line")
+    .data(this.graph?.links || [])
+    .enter().append("line")
+    .attr("stroke-width",3)
+    .style("stroke" , '#489ded')
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout);
+    console.log(graph);
+
+    var node = svg.append("g")
+        .attr("class", "nodes")
+      .selectAll("g")
+      .data(this.graph?.nodes || [])
+      // .data(tablesourcerouter=this.graph.nodes)
+      .enter().append("g")
+      .attr("target", '_blank');
+      
+    node.call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));  
+
+    node.append("image")
+      .attr(
+      "xlink:href" , function (d) {
+    // console.log(d.id);
+      
+      if((d.id).includes("Receiver"))
+      return imageByType["laptop_online"];
+      else if(d.id=="Multicast Source")
+      return imageByType["multicast_source_pic"];
+      else
+      return imageByType["router_online"];
+      })
+      .attr("x", function(d) { return -25;})
+        .attr("y", function(d) { return -25;})
+        .attr("height", 30)
+        .attr("width", 50)
+        .attr("fill", function(d) { return color(d.group); }); 
+      
+        if (myCheck.checked == true)
+      {
+        show_labels();
+      }
+      
+        myCheck.onclick=()=>{
+      if (myCheck.checked == true)
+      {
+        console.log("Checked");
+        show_labels();
+      }
+      else
+      {
+        console.log("Unchecked");
+        svg.selectAll("text").remove();
+      }
+    }
+     
+    function show_labels(){
+      var lables = node.append("text")
+        .text(function(d) {
+          return d.id;
+        })
+        .attr('x', 20)
+        .attr('y', 7)
+        .style("font-size", "15px");
+    }
+
+    simulation
+        .nodes(this.graph?.nodes || [])
+        .on("tick", ticked);
+
+    simulation.force("link")
+        .links(this.graph?.links || []);    
+
+    function ticked() {
+      link
+          .attr("x1", function(d) { return d.source.x; })
+          .attr("y1", function(d) { return d.source.y; })
+          .attr("x2", function(d) { return d.target.x; })
+          .attr("y2", function(d) { return d.target.y; });
+
+      node
+          .attr("transform", function(d) {
+            return "translate(" + d.x + "," + d.y + ")";
+          })
+    }
+  // });
+
+  function dragstarted(d) {
+    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+
+  function dragged(d) {
+    d.fx = d3.event.x;
+    d.fy = d3.event.y;
+  }
+
+  function dragended(d) {
+    if (!d3.event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
+
+  var div=d3.select("#tables");	
+ function mouseover(d){ 
+  d3.select(this).select("link").transition()
+      .duration(750)
+      .attr("r", 8)
+  // .data(graph.links)
+      ;
+    
+      var i,tr,sourceip,sourceint,neighip,neighint;
+for (i = 0; i < graph.tableresults.length; i++) {
+  // console.log(graph.tableresults[0]["Neighbor IP"]);
+  if((d.source.id).includes("Receiver"))
+  {
+  console.log(d.source.id, d.target.id);
+    if(d.source.id==graph.tableresults[i]["IGMP Source"] && d.target.id==graph.tableresults[i]["IGMP Neighbor"]){
+  tr=graph.tableresults[i]["IGMP Neighbor"];
+  sourceip=graph.tableresults[i]["IGMP Source IP"];
+  // sourceint=graph.tableresults[i]["Source Interface"];
+  neighip=graph.tableresults[i]["Group Address"];
+  neighint=graph.tableresults[i]["IGMP Neighbor Interface"];
+  }
+  }
+  else
+  {
+  if(d.source.id==graph.tableresults[i]["Source Name"] && d.target.id==graph.tableresults[i]["Neighbor Name"]){
+  console.log(d.source.id, d.target.id);
+  tr=graph.tableresults[i]["Neighbor Name"];
+  sourceip=graph.tableresults[i]["Source IP"];
+  sourceint=graph.tableresults[i]["Source Interface"];
+  neighip=graph.tableresults[i]["Neighbor IP"];
+  neighint=graph.tableresults[i]["Neighbor Interface"];
+  }
+}
+}
+if((d.source.id).includes("Receiver"))
+  {
+    div.html("IGMP Source:" + d.source.id + "<br/>" 
+      + "IGMP Source IP:" + sourceip + "<br/>" 
+      + "IGMP Neighbor:" + tr + "<br/>" 
+      + "Group Address:" + neighip + "<br/>" 
+      + "IGMP Neigh Inter:" + neighint)
+      // div.html("Source Router:" + graph.links[0].source.id.toString() + "<br/>" + "Site:" + graph.nodes[0].id.toString())
+      .style("transition-duration","7s")
+      .style("animation","fadein 7s ease-in");
+    // console.log(neighip);
+
+  }
+  else if((d.target.id).includes("Multicast Source")==0)
+  {
+      div.html("Router 1:" + d.source.id + "<br/>" 
+      + "Router 1 IP:" + sourceip + "<br/>" 
+      + "Router 1 Interface:" + sourceint + "<br/>" 
+      + "Router 2:" + tr + "<br/>" 
+      + "Router 2 IP:" + neighip + "<br/>" 
+      + "Router 2 Interface:" + neighint)
+      // div.html("Source Router:" + graph.links[0].source.id.toString() + "<br/>" + "Site:" + graph.nodes[0].id.toString())
+      .style("transition-duration","7s")
+      .style("animation","fadein 7s ease-in");
+ }
+}
+ function mouseout(){
+    // d3.selectAll("node")
+        d3.select(this).select("link").transition()
+      .duration(750)
+      .attr("r", 5);
+      div
+      .style("transition-duration","7s")
+      .style("animation","fadeout 7s ease-in forwards");
+      
+    }
+
+  console.log(flag);
+
+//     var button1 = document.createElement("button");
+//     button1.innerHTML = "232.1.1.1";
+
+//     // 2. Append somewhere
+//     // var body = document.getElementsByTagName("body")[0];
+//     // button.appendChild(button1);
+
+// // 3. Add event handler
+//   button1.addEventListener ("click", function() {
+//     console.log("Vanakkam");
+// 	svg.selectAll("lables").remove();
+// 	});
+}
+
+</script>
